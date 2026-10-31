@@ -25,8 +25,18 @@ def numerical_gradient(f, x, eps=1e-5):
     #Result
     return grad
 
-# Step 2 - gradient_check (not yet solved)
-# TODO: implement
+# Step 2 - gradient_check
+def gradient_check(analytic_grad, numeric_grad, tol=1e-5):
+    
+    #Initialization
+    a_grad,n_grad=np.asarray(analytic_grad),np.asarray(numeric_grad)
+    diff=np.abs(analytic_grad-numeric_grad)
+    
+    #Maximum
+    max_array=np.maximum(np.maximum(np.abs(a_grad),np.abs(n_grad)),tol)
+
+    #Result
+    return np.max(diff/max_array)
 
 # Step 3 - make_dense (not yet solved)
 # TODO: implement
