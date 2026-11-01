@@ -201,8 +201,31 @@ def make_sequential(layers):
 
     return {'params':params, 'forward':forward, 'backward':backward}
 
-# Step 8 - forward_backward (not yet solved)
-# TODO: implement
+# Step 8 - forward_backward
+def forward_backward(model, loss_fn, x, y):
+    """Run one full forward-backward sweep on a batch.
+
+    Inputs:
+      model: sequential dict with 'forward', 'backward', 'params'
+             model['forward'](x) -> (logits, caches)
+             model['backward'](d_logits, caches) -> (dx, param_grads)
+      loss_fn: callable (logits, y) -> (loss, d_logits)
+      x: np.ndarray (batch, in_dim)
+      y: np.ndarray (batch,) integer labels
+
+    Returns:
+      loss: float, scalar batch loss
+      param_grads: nested np.ndarrays matching model['params'] layout
+                   (gradients of loss w.r.t. every parameter)
+    """
+    
+    logits, caches = model['forward'](x)
+
+    loss,d_logits= loss_fn(logits, y)
+
+    dx, param_grads =model['backward'](d_logits, caches)
+
+    return (loss,param_grads)
 
 # Step 9 - make_optimizer (not yet solved)
 # TODO: implement
