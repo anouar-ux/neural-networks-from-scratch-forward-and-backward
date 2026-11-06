@@ -227,8 +227,38 @@ def forward_backward(model, loss_fn, x, y):
 
     return (loss,param_grads)
 
-# Step 9 - make_optimizer (not yet solved)
-# TODO: implement
+# Step 9 - make_optimizer
+# ── Step 009  make_optimizer ──
+def make_optimizer(params, lr=1e-2, kind='sgd'):
+    """Build an optimizer that updates params in place.
+
+    Inputs:
+      params: arrays, possibly nested in lists/dicts (or dict of arrays) to optimize
+      lr: float learning rate
+      kind: str algorithm name (e.g. 'sgd')
+
+    Returns:
+      dict with key 'step'. step(grads) applies one in-place update
+      using grads structured like params. 
+    """
+    
+    def step(grads):
+        # Fonction interne récursive pour parcourir n'importe quelle structure
+        def apply_update(p, g):
+            if isinstance(p, dict):
+                for k in p.keys():
+                    apply_update(p[k], g[k])
+            elif isinstance(p, (list, tuple)):
+                for p_item, g_item in zip(p, g):
+                    apply_update(p_item, g_item)
+            else:
+                # Arrivé au tableau NumPy : mise à jour in-place grâce au -=
+                p -= lr * g
+                
+        # On lance la mise à jour sur la structure globale
+        apply_update(params, grads)
+
+    return {'step': step}
 
 # Step 10 - train_step (not yet solved)
 # TODO: implement
