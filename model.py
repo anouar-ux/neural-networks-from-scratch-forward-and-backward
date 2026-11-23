@@ -324,8 +324,103 @@ def train(model, loss_fn, optimizer, x, y, epochs, batch_size, seed=0):
 
     return history
 
-# Step 12 - design_network (not yet solved)
-# TODO: implement
+# Step 12 - design_network
+# ── Step 012  design_network ──
+def design_network(input_dim, num_classes, seed=0):
+    """Design and train a net that solves a nonlinear classification task.
+
+    Inputs:
+      input_dim: int, feature dimension
+      num_classes: int, number of classes
+      seed: int, RNG seed for reproducibility
+
+    Returns:
+      model: trained sequential model (forward/backward/params)
+      metrics: dict with
+        'accuracy': float >= 0.90 on an evaluation set,
+        'x': np.ndarray (N, input_dim) eval features (N >= 50),
+        'y': np.ndarray (N,) integer eval labels.
+      The eval set (x, y) must not be linearly separable to high accuracy
+      (< 0.82 for a linear classifier), and the model's true accuracy on
+      it must match metrics['accuracy'] and be >= 0.90.
+    """
+    # --- 1. Gestion de la reproductibilité ---
+    rng = np.random.default_rng(seed)
+    np.random.seed(seed)
+
+        # --- 2. Génération du jeu de données non linéaire ---
+    n_per_class = max(60, 180 // num_classes)
+    x_list = []
+    y_list = []
+
+    if input_dim == 1:
+        num_segments = 2 * num_classes
+        edges = np.linspace(-0.95, 0.95, num_segments + 1)
+        samples_per_seg = max(15, (n_per_class * num_classes) // num_segments)
+        for seg_idx in range(num_segments):
+            pts = rng.uniform(edges[seg_idx] + 0.01, edges[seg_idx + 1] - 0.01, size=(samples_per_seg, 1))
+            lbls = np.full(samples_per_seg, seg_idx % num_classes, dtype=int)
+            x_list.append(pts)
+            y_list.append(lbls)
+    else:
+        for k in range(num_classes):
+            r = np.linspace(0.08, 0.95, n_per_class)
+            # 1.25 tour par branche : impossible pour un modèle linéaire, facile pour le MLP
+            theta = (2.0 * np.pi * k / num_classes) + (2.5 * np.pi * r) + rng.normal(0.0, 0.08, size=n_per_class)
+
+            x_k = np.zeros((n_per_class, input_dim), dtype=float)
+            x_k[:, 0] = r * np.cos(theta)
+            x_k[:, 1] = r * np.sin(theta)
+            if input_dim > 2:
+                x_k[:, 2:] = rng.normal(0.0, 0.05, size=(n_per_class, input_dim - 2))
+
+            y_k = np.full(n_per_class, k, dtype=int)
+            x_list.append(x_k)
+            y_list.append(y_k)
+
+    x = np.vstack(x_list)
+    y = np.concatenate(y_list)
+
+    perm = rng.permutation(len(x))
+    x = x[perm]
+    y = y[perm]
+
+    # --- 3. Construction de l'architecture du réseau ---
+    def init_fn(in_d, out_d):
+        return initialize_weights(in_d, out_d, scheme='he')
+
+    hidden_dim = 96
+    layers = [
+        make_dense(input_dim, hidden_dim, init_fn),
+        make_activation(kind='relu'),
+        make_dense(hidden_dim, hidden_dim, init_fn),
+        make_activation(kind='relu'),
+        make_dense(hidden_dim, num_classes, init_fn),
+    ]
+    model = make_sequential(layers)
+
+    # --- 4. Configuration et entraînement (learning rate dégressif) ---
+    loss_fn = make_loss(kind='cross_entropy')
+
+    opt_fast = make_optimizer(model['params'], lr=0.2, kind='sgd')
+    train(model, loss_fn, opt_fast, x, y, epochs=400, batch_size=32, seed=seed)
+
+    opt_fine = make_optimizer(model['params'], lr=0.05, kind='sgd')
+    train(model, loss_fn, opt_fine, x, y, epochs=400, batch_size=32, seed=seed)
+
+
+    # --- 5. Évaluation et formatage du retour ---
+    logits, _ = model['forward'](x)
+    preds = np.argmax(logits, axis=1)
+    accuracy = float(np.mean(preds == y))
+
+    metrics = {
+        'accuracy': accuracy,
+        'x': x,
+        'y': y,
+    }
+
+    return model, metrics
 
 # Step 13 - improve_generalization (not yet solved)
 # TODO: implement
